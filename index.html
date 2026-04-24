@@ -1,23 +1,16 @@
 <!DOCTYPE html>
 <html>
 <head>
- <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#00c853">
- 
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>RIMA PRO AI PESCA</title>
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<!-- LEAFLET OK -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
 <style>
 body { margin:0; }
- <script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js');
-}
-</script>
 #map { height:100vh; }
 
 .panel {
@@ -30,6 +23,7 @@ if ('serviceWorker' in navigator) {
  padding: 15px;
  border-radius: 15px;
  font-family: Arial;
+ z-index:1000;
 }
 
 button {
@@ -41,18 +35,6 @@ button {
  background:#00c853;
  color:white;
  font-size:16px;
-}
-
-/* frecce corrente */
-.current {
- position:absolute;
- font-size:20px;
- animation: move 3s linear infinite;
-}
-
-@keyframes move {
- 0% { transform: translateY(0px); opacity:1;}
- 100% { transform: translateY(40px); opacity:0;}
 }
 </style>
 </head>
@@ -72,38 +54,35 @@ button {
 <button onclick="goToLocation()">📍 Vai alla mia posizione</button>
 </div>
 
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<!-- SCRIPT LEAFLET -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
+
+// CONTROLLO SICUREZZA
+if (typeof L === "undefined") {
+  alert("Errore: Leaflet non caricato");
+}
 
 // MAPPA
 var map = L.map('map').setView([45.5869, 12.8650], 13);
 
+// TILE
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
  attribution: '© OpenStreetMap'
 }).addTo(map);
 
-// 🔥 SPOT REALI
-
-// FOCE LIVENZA
+// 🔥 FOCE LIVENZA
 L.marker([45.5869, 12.8650]).addTo(map)
-.bindPopup("🔥 Foce Livenza (TOP pesca)");
+.bindPopup("🔥 Foce Livenza");
 
-// DIGA LEVANTE
+// 🧱 DIGA LEVANTE
 L.marker([45.5865, 12.8685]).addTo(map)
-.bindPopup("🧱 Diga Levante");
+.bindPopup("Diga Levante");
 
-// DIGA PONENTE
-L.marker([45.5865, 12.8615]).addTo(map)
-.bindPopup("🧱 Diga Ponente");
-
-// TEGNÙE (offshore)
-L.marker([45.5700, 12.9500]).addTo(map)
-.bindPopup("🌊 Tegnùe (spot offshore)");
-
-// CANALE LAGUNA
-L.marker([45.6000, 12.8800]).addTo(map)
-.bindPopup("🐟 Canale laguna");
+// 🧱 DIGA PONENTE CORRETTA
+L.marker([45.5867, 12.8589]).addTo(map)
+.bindPopup("Diga Ponente");
 
 // 📍 GEOLOCALIZZAZIONE
 function goToLocation(){
@@ -116,28 +95,6 @@ function goToLocation(){
    L.marker([lat, lon]).addTo(map)
    .bindPopup("📍 Sei qui").openPopup();
  });
-}
-
-// 🌊 CORRENTI (simulazione visiva)
-function createCurrent(lat, lon){
- let el = document.createElement("div");
- el.className = "current";
- el.innerHTML = "➡️";
-
- let marker = L.marker([lat, lon], {
-   icon: L.divIcon({
-     className: '',
-     html: el,
-     iconSize: [20,20]
-   })
- }).addTo(map);
-}
-
-// aggiunge correnti vicino foce
-for(let i=0;i<10;i++){
- let lat = 45.586 + (Math.random()*0.01);
- let lon = 12.86 + (Math.random()*0.02);
- createCurrent(lat, lon);
 }
 
 </script>
