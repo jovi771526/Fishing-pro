@@ -1,43 +1,28 @@
 <!DOCTYPE html>
-
 <html>
-
 <head>
-
 <meta charset="utf-8">
-
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
-<title>RIMA - AI Pesca</title>
+<title>RIMA AI Pesca</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"/>
 
 <style>
-
 body { margin:0; font-family:Arial; }
-
 #map { height:100vh; }
 
 .panel {
-
   position:absolute;
-
   top:10px;
-
   left:10px;
-
   background:white;
-
-  padding:12px;
-
+  padding:14px;
   border-radius:10px;
-
   z-index:1000;
-
+  font-size:15px;
+  box-shadow:0 4px 15px rgba(0,0,0,0.3);
 }
-
 </style>
-
 </head>
 
 <body>
@@ -45,97 +30,90 @@ body { margin:0; font-family:Arial; }
 <div id="map"></div>
 
 <div class="panel">
-
-🌊 <span id="marea">...</span><br>
-
+🌊 <span id="marea">Caricamento...</span><br>
 🌬 <span id="vento">...</span><br>
-
 🌡 <span id="meteo">...</span><br>
-
 🎣 <span id="score">...</span><br>
-
 📍 <span id="spot">...</span>
-
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
 
 <script>
-
+// MAPPA SU CAORLE
 var map = L.map('map').setView([45.61678, 12.91280], 13);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png')
-
 .addTo(map);
 
+// DATI REALI
 async function getDati() {
+  try {
+    const meteo = await fetch("https://api.open-meteo.com/v1/forecast?latitude=45.61&longitude=12.91&current_weather=true")
+      .then(r => r.json());
 
-  const m = await fetch("https://api.open-meteo.com/v1/forecast?latitude=45.61&longitude=12.91&current_weather=true").then(r=>r.json());
+    const mare = await fetch("https://marine-api.open-meteo.com/v1/marine?latitude=45.61&longitude=12.91&hourly=sea_level_height")
+      .then(r => r.json());
 
-  const s = await fetch("https://marine-api.open-meteo.com/v1/marine?latitude=45.61&longitude=12.91&hourly=sea_level_height").then(r=>r.json());
+    let ora = new Date().getHours();
 
-  let ora = new Date().getHours();
+    return {
+      temp: meteo.current_weather.temperature,
+      vento: meteo.current_weather.windspeed,
+      livello: mare.hourly.sea_level_height[ora] || 0
+    };
 
-  return {
-
-    temp: m.current_weather.temperature,
-
-    vento: m.current_weather.windspeed,
-
-    livello: s.hourly.sea_level_height[ora]
-
-  };
-
+  } catch (e) {
+    console.log("Errore dati:", e);
+    return { temp: 0, vento: 0, livello: 0 };
+  }
 }
 
-function marea(a,b){
-
-  if(a>b) return "Marea in salita 📈";
-
-  if(a<b) return "Marea in discesa 📉";
-
-  return "Marea ferma";
-
+// CALCOLO MAREA
+function calcolaMarea(attuale, precedente) {
+  if (attuale > precedente) return "Marea in salita 📈";
+  if (attuale < precedente) return "Marea in discesa 📉";
+  return "Marea stabile";
 }
 
-function AI(t,v,m){
+// AI PESCA
+function AI(temp, vento, marea) {
+  let score = 50;
 
-  let score=50;
+  if (marea.includes("salita")) score += 25;
+  if (marea.includes("discesa")) score += 10;
 
-  if(m.includes("salita")) score+=30;
+  if (vento < 10) score += 15;
+  else if (vento > 20) score -= 20;
 
-  if(v<10) score+=10;
+  if (temp > 15 && temp < 28) score += 10;
 
-  if(t>15) score+=10;
+  score = Math.max(0, Math.min(100, score));
 
-  score=Math.min(100,score);
+  let spot = "Porto";
+  if (score > 75) spot = "Foce Livenza 🔥";
+  else if (score > 50) spot = "Dighe Caorle ⚡";
 
-  let spot = score>70?"Foce Livenza 🔥":"Dighe Caorle";
-
-  return {score,spot};
-
+  return {score, spot};
 }
 
-getDati().then(d=>{
+// AVVIO APP
+getDati().then(dati => {
 
-  let m = marea(d.livello,d.livello-0.02);
+  let livello = dati.livello;
+  let livelloPrec = livello - 0.02;
 
-  let r = AI(d.temp,d.vento,m);
+  let marea = calcolaMarea(livello, livelloPrec);
+  let risultato = AI(dati.temp, dati.vento, marea);
 
-  document.getElementById("marea").innerText=m;
-
-  document.getElementById("vento").innerText="Vento "+d.vento+" km/h";
-
-  document.getElementById("meteo").innerText="Temp "+d.temp+"°C";
-
-  document.getElementById("score").innerText="Score "+r.score+"/100";
-
-  document.getElementById("spot").innerText=r.spot;
+  document.getElementById("marea").innerText = marea + " (" + livello.toFixed(2) + "m)";
+  document.getElementById("vento").innerText = "Vento: " + dati.vento + " km/h";
+  document.getElementById("meteo").innerText = "Temp: " + dati.temp + "°C";
+  document.getElementById("score").innerText = "Score pesca: " + risultato.score + "/100";
+  document.getElementById("spot").innerText = risultato.spot;
 
 });
-
 </script>
 
 </body>
-
 </html>
