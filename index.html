@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
+ <link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#00c853">
+ 
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -10,6 +13,11 @@
 
 <style>
 body { margin:0; }
+ <script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js');
+}
+</script>
 #map { height:100vh; }
 
 .panel {
