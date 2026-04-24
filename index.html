@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>RIMA - AI Pesca</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"/>
+
+<style>
+
+body { margin:0; font-family:Arial; }
+
+#map { height:100vh; }
+
+.panel {
+
+  position:absolute;
+
+  top:10px;
+
+  left:10px;
+
+  background:white;
+
+  padding:12px;
+
+  border-radius:10px;
+
+  z-index:1000;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div id="map"></div>
+
+<div class="panel">
+
+🌊 <span id="marea">...</span><br>
+
+🌬 <span id="vento">...</span><br>
+
+🌡 <span id="meteo">...</span><br>
+
+🎣 <span id="score">...</span><br>
+
+📍 <span id="spot">...</span>
+
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+
+<script>
+
+var map = L.map('map').setView([45.61678, 12.91280], 13);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png')
+
+.addTo(map);
+
+async function getDati() {
+
+  const m = await fetch("https://api.open-meteo.com/v1/forecast?latitude=45.61&longitude=12.91&current_weather=true").then(r=>r.json());
+
+  const s = await fetch("https://marine-api.open-meteo.com/v1/marine?latitude=45.61&longitude=12.91&hourly=sea_level_height").then(r=>r.json());
+
+  let ora = new Date().getHours();
+
+  return {
+
+    temp: m.current_weather.temperature,
+
+    vento: m.current_weather.windspeed,
+
+    livello: s.hourly.sea_level_height[ora]
+
+  };
+
+}
+
+function marea(a,b){
+
+  if(a>b) return "Marea in salita 📈";
+
+  if(a<b) return "Marea in discesa 📉";
+
+  return "Marea ferma";
+
+}
+
+function AI(t,v,m){
+
+  let score=50;
+
+  if(m.includes("salita")) score+=30;
+
+  if(v<10) score+=10;
+
+  if(t>15) score+=10;
+
+  score=Math.min(100,score);
+
+  let spot = score>70?"Foce Livenza 🔥":"Dighe Caorle";
+
+  return {score,spot};
+
+}
+
+getDati().then(d=>{
+
+  let m = marea(d.livello,d.livello-0.02);
+
+  let r = AI(d.temp,d.vento,m);
+
+  document.getElementById("marea").innerText=m;
+
+  document.getElementById("vento").innerText="Vento "+d.vento+" km/h";
+
+  document.getElementById("meteo").innerText="Temp "+d.temp+"°C";
+
+  document.getElementById("score").innerText="Score "+r.score+"/100";
+
+  document.getElementById("spot").innerText=r.spot;
+
+});
+
+</script>
+
+</body>
+
+</html>
