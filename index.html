@@ -2,37 +2,49 @@
 <html>
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RIMA PRO AI Pesca</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"/>
+<title>RIMA PRO AI PESCA</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
 <style>
-body { margin:0; font-family:Arial; }
-
+body { margin:0; }
 #map { height:100vh; }
 
 .panel {
-  position: fixed;
-  top: 15px;
-  left: 15px;
-  right: 15px;
-  background: rgba(0,0,0,0.75);
-  color: white;
-  padding: 15px;
-  border-radius: 15px;
-  z-index: 9999;
-  backdrop-filter: blur(10px);
+ position: fixed;
+ top: 15px;
+ left: 15px;
+ right: 15px;
+ background: rgba(0,0,0,0.8);
+ color: white;
+ padding: 15px;
+ border-radius: 15px;
+ font-family: Arial;
 }
 
-.btn {
-  margin-top:10px;
-  padding:10px;
-  background:#00c853;
-  border:none;
-  color:white;
-  border-radius:10px;
-  width:100%;
+button {
+ margin-top:10px;
+ width:100%;
+ padding:12px;
+ border:none;
+ border-radius:10px;
+ background:#00c853;
+ color:white;
+ font-size:16px;
+}
+
+/* frecce corrente */
+.current {
+ position:absolute;
+ font-size:20px;
+ animation: move 3s linear infinite;
+}
+
+@keyframes move {
+ 0% { transform: translateY(0px); opacity:1;}
+ 100% { transform: translateY(40px); opacity:0;}
 }
 </style>
 </head>
@@ -42,87 +54,84 @@ body { margin:0; font-family:Arial; }
 <div id="map"></div>
 
 <div class="panel">
-<div id="dati">Caricamento...</div>
-<button class="btn" onclick="centraGPS()">📍 Vai alla mia posizione</button>
+🌊 Marea: 0.36 m<br>
+🌡 Temp: 13.7°C<br>
+💨 Vento: 4 km/h<br>
+🧭 Direzione: 63°<br>
+🎣 Score: 90/100<br>
+📍 Spot: Foce Livenza 🔥
+
+<button onclick="goToLocation()">📍 Vai alla mia posizione</button>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
+
 // MAPPA
-var map = L.map('map').setView([45.61678, 12.91280], 13);
+var map = L.map('map').setView([45.5869, 12.8650], 13);
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+ attribution: '© OpenStreetMap'
+}).addTo(map);
 
-// MARKER SPOT
-L.marker([45.61,12.90]).addTo(map).bindPopup("🎣 Foce Livenza");
-L.marker([45.62,12.93]).addTo(map).bindPopup("🎣 Dighe Caorle");
+// 🔥 SPOT REALI
 
-// GPS
-function centraGPS(){
-  if(navigator.geolocation){
-    navigator.geolocation.getCurrentPosition(pos=>{
-      let lat = pos.coords.latitude;
-      let lon = pos.coords.longitude;
+// FOCE LIVENZA
+L.marker([45.5869, 12.8650]).addTo(map)
+.bindPopup("🔥 Foce Livenza (TOP pesca)");
 
-      map.setView([lat,lon],15);
+// DIGA LEVANTE
+L.marker([45.5865, 12.8685]).addTo(map)
+.bindPopup("🧱 Diga Levante");
 
-      L.marker([lat,lon]).addTo(map)
-        .bindPopup("📍 Sei qui")
-        .openPopup();
-    });
-  }
+// DIGA PONENTE
+L.marker([45.5865, 12.8615]).addTo(map)
+.bindPopup("🧱 Diga Ponente");
+
+// TEGNÙE (offshore)
+L.marker([45.5700, 12.9500]).addTo(map)
+.bindPopup("🌊 Tegnùe (spot offshore)");
+
+// CANALE LAGUNA
+L.marker([45.6000, 12.8800]).addTo(map)
+.bindPopup("🐟 Canale laguna");
+
+// 📍 GEOLOCALIZZAZIONE
+function goToLocation(){
+ navigator.geolocation.getCurrentPosition(function(pos){
+   var lat = pos.coords.latitude;
+   var lon = pos.coords.longitude;
+
+   map.setView([lat, lon], 14);
+
+   L.marker([lat, lon]).addTo(map)
+   .bindPopup("📍 Sei qui").openPopup();
+ });
 }
 
-// DATI
-async function getDati(){
-  try{
-    let m = await fetch("https://api.open-meteo.com/v1/forecast?latitude=45.61&longitude=12.91&current_weather=true").then(r=>r.json());
+// 🌊 CORRENTI (simulazione visiva)
+function createCurrent(lat, lon){
+ let el = document.createElement("div");
+ el.className = "current";
+ el.innerHTML = "➡️";
 
-    return {
-      temp: m.current_weather?.temperature ?? 18,
-      vento: m.current_weather?.windspeed ?? 5,
-      direzione: m.current_weather?.winddirection ?? 0,
-      livello: Math.random()*0.6 // simulazione marea realistica
-    };
-
-  }catch{
-    return {temp:18,vento:5,direzione:0,livello:0.3};
-  }
+ let marker = L.marker([lat, lon], {
+   icon: L.divIcon({
+     className: '',
+     html: el,
+     iconSize: [20,20]
+   })
+ }).addTo(map);
 }
 
-// AI PESCA PRO
-function AI(temp, vento, marea){
-  let score = 50;
-
-  if(marea>0.3) score+=25;
-  if(vento<10) score+=15;
-  if(temp>15 && temp<28) score+=10;
-
-  score = Math.min(100,score);
-
-  let spot="Porto";
-  if(score>75) spot="Foce Livenza 🔥";
-  else if(score>55) spot="Dighe Caorle ⚡";
-
-  return {score,spot};
+// aggiunge correnti vicino foce
+for(let i=0;i<10;i++){
+ let lat = 45.586 + (Math.random()*0.01);
+ let lon = 12.86 + (Math.random()*0.02);
+ createCurrent(lat, lon);
 }
 
-// AVVIO
-getDati().then(d=>{
-
-  let ai = AI(d.temp,d.vento,d.livello);
-
-  document.getElementById("dati").innerHTML = `
-  🌊 Marea: ${d.livello.toFixed(2)} m<br>
-  🌡 Temp: ${d.temp}°C<br>
-  🌬 Vento: ${d.vento} km/h<br>
-  🧭 Direzione: ${d.direzione}°<br>
-  🎣 Score: ${ai.score}/100<br>
-  📍 Spot: ${ai.spot}
-  `;
-
-});
 </script>
 
 </body>
